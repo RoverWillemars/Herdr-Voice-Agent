@@ -103,6 +103,7 @@ if os.path.exists(path):
     with open(path) as f:
         settings = json.load(f)
     shutil.copy2(path, path + ".bak-herdr-voice-agent")
+    print(f"backed up {path} to {path}.bak-herdr-voice-agent")
 hooks = settings.setdefault("hooks", {})
 wanted = {
     "Stop": {"type": "command", "command": f"{script} 2>/dev/null || true", "async": True},
@@ -119,7 +120,7 @@ with open(path + ".tmp", "w") as f:
     f.write("\n")
 os.replace(path + ".tmp", path)
 EOF
-  say "Hooks added (backup: ~/.claude/settings.json.bak-herdr-voice-agent). In running Claude Code sessions, open /hooks once (or restart) to load them."
+  say "Hooks added. In running Claude Code sessions, open /hooks once (or restart) to load them."
 fi
 
 if command -v herdr-app >/dev/null && herdr-app status >/dev/null 2>&1; then
