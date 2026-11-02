@@ -48,6 +48,13 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
 - **A Claude Code reply arrives** (Stop hook → `spool/<terminal>.json`, with `text` cleaned for speech and `raw` markdown). When `shared("voice-agent.mode")` is `"summary"` (the default) and the text is over 400 characters, `summarize.py <raw>` makes a summary of at most three sentences and 60 words that leads with the outcome and keeps any question. If it fails, the first two sentences are read, plus "The full reply is on screen". A stop for that terminal while summarizing drops the summary. **Read all** stops that terminal and reads the full `text`. The text that's read is split into sentences (ones under 40 characters are joined) and queued. `say.py` reads one reply at a time and writes which sentence it's on to `state/now.json`; the banner shows that sentence.
 - **Mute, or turning an agent's pill off:** pauses its reply, keeping the sentences from the current one onward. Turning it back on resumes from there. A reply that arrives while silenced is kept, newest only.
 - **Stop:** throws the reply away. A UserPromptSubmit hook sends a `stop` event for that terminal, so typing or talking interrupts that agent's speech.
+- **Questions:** a PreToolUse hook on `AskUserQuestion` (`speak-reply.py --ask`) sends `{text, full, intro, raw}`.
+  - `text` is the question and option labels ("Option 1: Bottom strip, recommended.").
+  - `intro`/`raw` is the text the agent wrote just before asking. It's taken from the transcript: the text entries right before the tool call, skipping thinking.
+  - `full` adds each option's description.
+
+  The banner says the intro (summarized like a reply when it's over 400 characters), then `text`; Read all says `full`. A PostToolUse hook on `AskUserQuestion` sends `stop` once it's answered.
+- **Permission prompts:** a Notification hook (`--notify`) reads `message` for `permission_prompt` and the other request types. It skips `idle_prompt` and `auth_success`.
 - **Talk:** stops speech, then runs `listen.py start`. **Send** runs `listen.py stop`, which transcribes the recording, then `hc send <agent> <text>`. The target is `focused().agent`, else the focused terminal if it's an agent, else the last agent that spoke, else the first agent.
 - **Read selection:** once a second, runs `clipread.py` with system `python3` and `GDK_BACKEND=x11`. When the primary selection or the clipboard changes, the new text is read, but only if:
   - `window().active` was true at this check and the one before, so another app's selection doesn't count;
@@ -69,7 +76,7 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
   - `say.py` runs detached (`sh -c 'setsid "$@" &'`), because `exec` gives up after 30 s.
 - **`mods/voice-agent-voices`:** a dialog with `width: 620, height: 0.75` that watches `voices/`.
 - **Helpers in `~/.local/share/herdr-voice-agent/bin`**, run with `venv/bin/python` (Piper and faster-whisper):
-  - `speak-reply.py`: the hook. It touches nothing unless `spool/.heartbeat` is younger than 60 s, and otherwise speaks with `spd-say`.
+  - `speak-reply.py`: the hooks: Stop (reply), PreToolUse `AskUserQuestion` (`--ask`), Notification (`--notify`), UserPromptSubmit and PostToolUse `AskUserQuestion` (`--stop`). It touches nothing unless `spool/.heartbeat` is younger than 60 s, and otherwise speaks with `spd-say`.
   - `summarize.py`: `claude -p --model haiku --no-session-persistence --settings '{"disableAllHooks": true}' --tools "" --system-prompt …`, run with `cwd` in the data folder and a 25 s timeout. `HERDR_VOICE_SUMMARIZING=1` makes the hook ignore it.
   - `say.py`: Piper with sentence look-ahead, played with `pw-play`, `paplay` or `aplay`; or `spd-say -w`. `--stop` kills the player through the pid in `now.json`.
   - `listen.py`: `pw-record` at 16 kHz mono from the first non-monitor source, then faster-whisper `base`, int8, on the CPU.

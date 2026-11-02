@@ -39,7 +39,7 @@ This:
 1. copies the `voice-agent` and `voice-agent-voices` mods into `~/.config/herdr-app/mods/`;
 2. puts the helper scripts, a Python environment, voice packs and the speech-to-text model in `~/.local/share/herdr-voice-agent/` (about 700 MB in all, mostly the Python libraries);
 3. downloads one voice pack (`en_US-lessac-medium`, 63 MB) and the Whisper `base` speech-to-text model (about 145 MB);
-4. with `--claude-hooks`, adds two hooks to `~/.claude/settings.json` so that Claude Code replies are read aloud;
+4. with `--claude-hooks`, adds hooks to `~/.claude/settings.json` so that Claude Code replies, questions and permission prompts are read aloud;
 5. opens the banner in Herdr.
 
 After installing, open `/hooks` once in Claude Code sessions that were already running (or restart them) so they load the hooks.
@@ -71,7 +71,10 @@ To use the hooks in one project instead of in every Claude Code session, skip `-
 {
   "hooks": {
     "Stop": [{ "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py 2>/dev/null || true", "async": true }] }],
-    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py --stop 2>/dev/null || true" }] }]
+    "PreToolUse": [{ "matcher": "AskUserQuestion", "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py --ask 2>/dev/null || true", "async": true }] }],
+    "Notification": [{ "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py --notify 2>/dev/null || true", "async": true }] }],
+    "UserPromptSubmit": [{ "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py --stop 2>/dev/null || true" }] }],
+    "PostToolUse": [{ "matcher": "AskUserQuestion", "hooks": [{ "type": "command", "command": "~/.local/share/herdr-voice-agent/bin/speak-reply.py --stop 2>/dev/null || true", "async": true }] }]
   }
 }
 ```
@@ -114,6 +117,8 @@ From left to right:
 | **✕** | Closes the banner. Reopen it with `herdr-app do mod.open --name voice-agent`. |
 
 Sending a new prompt to an agent stops that agent's speech, so you can interrupt by talking or typing.
+
+**Questions and permission prompts are read too.** When an agent stops to ask you something, such as a question with numbered options or a permission prompt, its turn isn't over yet, so there's no reply to read. Instead, the banner reads what the agent wrote just before asking (summarized when long), then the question and each option: *"Question: Where should the strip go? Option 1: Bottom strip, recommended. Option 2: …"*. **Read all** adds each option's description. Speech stops once you answer. A permission prompt is read when it has waited about six seconds, for example *"Claude needs your permission to use Bash"*. The *"waiting for your input"* reminder isn't read.
 
 ### Keyboard shortcuts
 

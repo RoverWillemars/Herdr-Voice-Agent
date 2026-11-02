@@ -111,15 +111,24 @@ if os.path.exists(path):
     shutil.copy2(path, path + ".bak-herdr-voice-agent")
     print(f"backed up {path} to {path}.bak-herdr-voice-agent")
 hooks = settings.setdefault("hooks", {})
-wanted = {
-    "Stop": {"type": "command", "command": f"{script} 2>/dev/null || true", "async": True},
-    "UserPromptSubmit": {"type": "command", "command": f"{script} --stop 2>/dev/null || true"},
-}
-for event, hook in wanted.items():
+def hook(flag="", wait=False):
+    h = {"type": "command", "command": f"{script}{' ' + flag if flag else ''} 2>/dev/null || true"}
+    return h if wait else dict(h, **{"async": True})
+
+# (event, tool matcher, hook): the reply when a turn ends; a question or permission prompt while
+# the agent waits on you (that turn hasn't ended); stop talking once you answer.
+wanted = [
+    ("Stop", None, hook()),
+    ("PreToolUse", "AskUserQuestion", hook("--ask")),
+    ("Notification", None, hook("--notify")),
+    ("UserPromptSubmit", None, hook("--stop", wait=True)),
+    ("PostToolUse", "AskUserQuestion", hook("--stop")),
+]
+for event, matcher, h in wanted:
     groups = hooks.setdefault(event, [])
-    if any("speak-reply.py" in h.get("command", "") for g in groups for h in g.get("hooks", [])):
-        continue
-    groups.append({"hooks": [hook]})
+    if any(x.get("command") == h["command"] for g in groups for x in g.get("hooks", [])):
+        continue  # already added by an earlier install
+    groups.append({"matcher": matcher, "hooks": [h]} if matcher else {"hooks": [h]})
 os.makedirs(os.path.dirname(path), exist_ok=True)
 with open(path + ".tmp", "w") as f:
     json.dump(settings, f, indent=2)

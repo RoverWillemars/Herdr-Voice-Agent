@@ -127,7 +127,8 @@ export default class VoiceAgent extends View {
   // Long replies are read as a Haiku summary (voice-agent.mode "summary", the default); Read all reads
   // the whole reply. If the summary fails, the first two sentences stand in for it.
   reply(ev, cx) {
-    const { terminal, text, raw } = ev;
+    const { terminal, text, raw, full } = ev;
+    if (full) return this.question(ev, cx);
     const summarize = (shared("voice-agent.mode") ?? "summary") === "summary" && Boolean(raw) && text.length > SHORT;
     this.lastReply = { terminal, text, summarized: summarize };
     if (!summarize) return this.say(terminal, text, cx);
@@ -139,6 +140,24 @@ export default class VoiceAgent extends View {
       delete this.pending[terminal];
       const summary = r?.code === 0 ? r.stdout.trim() : "";
       this.say(terminal, summary || `${chunks(text).slice(0, 2).join(" ")} The full reply is on screen.`, cx, true);
+    });
+  }
+
+  // A question or prompt the agent waits on: its explanation (summarized when long), then the
+  // question and option labels as they are. Read all adds the options' descriptions.
+  question(ev, cx) {
+    const { terminal, text, raw, full, intro } = ev;
+    this.lastReply = { terminal, text: full, summarized: true }; // Read all: the whole explanation and every option's description
+    const summarize = (shared("voice-agent.mode") ?? "summary") === "summary" && Boolean(raw) && (intro ?? "").length > SHORT;
+    if (!summarize) return this.say(terminal, `${intro ?? ""} ${text}`.trim(), cx);
+    this.pending[terminal] = ev.id;
+    cx.notify();
+    cx.spawn(async (cx) => {
+      const r = await exec(PY, [`${BIN}/summarize.py`, raw]).catch(() => null);
+      if (this.pending[terminal] !== ev.id) return;
+      delete this.pending[terminal];
+      const summary = r?.code === 0 ? r.stdout.trim() : chunks(intro).slice(0, 2).join(" ");
+      this.say(terminal, `${summary} ${text}`, cx, true);
     });
   }
 
