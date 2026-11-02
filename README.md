@@ -29,7 +29,7 @@ sudo apt install speech-dispatcher python3-venv python3-gi gir1.2-gtk-3.0
 ## Install
 
 ```sh
-git clone https://github.com/<you>/herdr-speech.git
+git clone https://github.com/RoverWillemars/herdr-speech.git
 cd herdr-speech
 ./install.sh --claude-hooks
 ```
