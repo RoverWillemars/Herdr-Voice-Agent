@@ -86,6 +86,7 @@ if [ "$MIC" = 1 ]; then
 fi
 
 say "Installing the mods into $HERDR_HOME/mods"
+mkdir -p "$HERDR_HOME/mods"
 for mod in voice-agent voice-agent-voices; do
   rm -rf "$HERDR_HOME/mods/$mod"
   cp -r "$REPO/mods/$mod" "$HERDR_HOME/mods/$mod"
