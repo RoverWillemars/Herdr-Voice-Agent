@@ -43,7 +43,12 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
 - **Mute, or turning an agent's pill off:** pauses its reply, keeping the sentences from the current one onward. Turning it back on resumes from there. A reply that arrives while silenced is kept, newest only.
 - **Stop:** throws the reply away. A UserPromptSubmit hook sends a `stop` event for that terminal, so typing or talking interrupts that agent's speech.
 - **Talk:** stops speech, then runs `listen.py start`. **Send** runs `listen.py stop`, which transcribes the recording, then `hc send <agent> <text>`. The target is `focused().agent`, else the focused terminal if it's an agent, else the last agent that spoke, else the first agent.
-- **Read selection:** once a second, runs `clipread.py` with system `python3` and `GDK_BACKEND=x11`. When the primary selection or the clipboard changes, the new text is read. Text that was already there when it was turned on isn't read.
+- **Read selection:** once a second, runs `clipread.py` with system `python3` and `GDK_BACKEND=x11`. When the primary selection or the clipboard changes, the new text is read, but only if:
+  - `window().active` was true at this check and the one before, so another app's selection doesn't count;
+  - the text, with all whitespace removed, appears in `hc read <t> --lines 300` for the focused terminal or another terminal pane of the shown tab;
+  - it doesn't look like a secret: a single word mixing letter cases, digits or symbols, or a token prefix.
+
+  Text that was already there when it was turned on isn't read.
 - **Voices:** `shared("speech.voices")` holds `{default?, <terminal>?}` → `"piper:<pack>"` or `"system:<spd-say type>"`, and `shared("speech.speed")` holds the speed. Without a choice, agents get the first installed pack, or else a system voice each.
 - **Keys:** `speech.talk`, `speech.stop`, `speech.mute` and `speech.select` arrive through `nextCommand()`.
 
@@ -83,6 +88,6 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
 - A reply over 400 characters shows "Summarizing the reply…", then reads a summary of at most three sentences marked "· summary". Read all then reads the full reply.
 - Piping `{"last_assistant_message": "One. Two. Three."}` into `speak-reply.py` with `HC_TERMINAL_ID` set to an agent's address makes the banner show each sentence in turn while a Piper voice reads it.
 - Muting halfway and unmuting continues from the interrupted sentence.
-- Copying text while Read selection is on shows "Selection" and reads it.
+- Copying a line from a terminal while Read selection is on shows "Selection" and reads it. Copying text that isn't in any terminal of the shown tab does nothing.
 - Talk → speaking → Send types the words into the focused agent's prompt.
 - Voices → Download adds a pack to the Installed list without reopening the dialog.

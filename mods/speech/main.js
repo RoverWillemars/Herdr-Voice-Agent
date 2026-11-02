@@ -1,7 +1,7 @@
 import { View, div, svg } from "gpui-kit";
 import { h_flex, v_flex } from "gpui-base";
 import * as fs from "fs/promises";
-import { agents, focused, theme, exec, hc, home, readTextFile, watchFolder, shared, setShared, nextCommand, props, closeOverlay, openOverlay } from "herdr";
+import { agents, focused, panes, window, theme, exec, hc, home, readTextFile, watchFolder, shared, setShared, nextCommand, props, closeOverlay, openOverlay } from "herdr";
 
 // The scripts and data live in ~/.local/share/herdr-speech (see install.sh):
 //   spool/<terminal>.json  replies from the Claude Code hook ({kind: "say" | "stop", id, text})
@@ -351,8 +351,14 @@ export default class Speech extends View {
     if (!on) this.stop(cx, "selection");
   }
 
+  // Only text selected or copied in Herdr's terminals is read: Herdr's window must have been active
+  // since the last check (so it wasn't another app's selection), and the text must be on the screen
+  // or in the recent history of a terminal in the shown tab (so not a side panel or another app).
   async pollSelection(cx) {
     this.polling = true;
+    const active = Boolean(window()?.active);
+    const ours = active && this.wasActive;
+    this.wasActive = active;
     try {
       // System Python: GTK's bindings come with the desktop, not the venv.
       const r = await exec("env", ["GDK_BACKEND=x11", "python3", "-I", `${BIN}/clipread.py`]).catch(() => null);
@@ -365,7 +371,8 @@ export default class Speech extends View {
         const first = !(which in this.clipLast);
         const changed = text !== this.clipLast[which];
         this.clipLast[which] = text;
-        if (first || !changed || !text || text === this.lastSpoken || shared("speech.muted") || looksSecret(text)) continue;
+        if (first || !changed || !text || !ours || text === this.lastSpoken || shared("speech.muted") || looksSecret(text)) continue;
+        if (!(await this.inTerminal(text))) continue;
         this.lastSpoken = text;
         this.stop(cx, "selection");
         this.say("selection", text, cx);
@@ -373,6 +380,17 @@ export default class Speech extends View {
     } finally {
       this.polling = false;
     }
+  }
+
+  async inTerminal(text) {
+    const needle = text.replace(/\s+/g, ""); // terminals wrap lines where the selection doesn't
+    const f = focused();
+    const shown = panes().filter((p) => p.tab === f?.tab && p.terminal).map((p) => p.terminal);
+    for (const terminal of new Set([f?.terminal, ...shown].filter(Boolean))) {
+      const r = await hc(["read", terminal, "--lines", "300"]).catch(() => null);
+      if (r?.code === 0 && r.stdout.replace(/\s+/g, "").includes(needle)) return true;
+    }
+    return false;
   }
 
   // ---- the banner ----
@@ -438,7 +456,7 @@ export default class Speech extends View {
         (cx) => this.toggleAgent(a.address, cx))))
       .child(div().w(1).h(16).flex_shrink_0().bg(t.border))
       .child(chip("select", select, "select", "Read selection",
-        select ? "Stop reading highlighted text" : "Read text aloud when you highlight or copy it", (cx) => this.toggleSelect(cx)))
+        select ? "Stop reading highlighted text" : "Read terminal text aloud when you highlight or copy it in Herdr", (cx) => this.toggleSelect(cx)))
       .when(select && !this.clipOk, (el) => el.child(div().flex_shrink_0().text_color(t.blocked).child("can't read the selection")))
       .child(chip("mode", summaries, "summary", summaries ? "Summaries" : "Full replies",
         summaries ? "Long replies are summarized before reading. Click to read them in full" : "Replies are read in full. Click to summarize long ones",

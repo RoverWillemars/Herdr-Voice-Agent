@@ -5,7 +5,7 @@ Talk to your coding agents in [Herdr](https://herdr.dev) and hear them answer.
 - **Hear replies.** When a Claude Code agent finishes a turn, its reply is read aloud, one sentence at a time, with the sentence shown in a banner.
 - **Short and to the point.** Long replies are summarized by Claude Haiku into a few spoken sentences: the outcome first, plus anything you need to decide. **Read all** reads the whole reply.
 - **Talk back.** Press **Talk**, say your prompt and press **Send**. Your words are turned into text on your own computer and typed into the agent you're looking at.
-- **Read anything.** Turn on **Read selection** and any text you highlight or copy is read aloud.
+- **Read terminal text.** Turn on **Read selection** and text you highlight or copy in Herdr's terminals is read aloud.
 - **Pick voices.** Natural-sounding [Piper](https://github.com/OHF-Voice/piper1-gpl) voice packs, a different voice per agent, and a speed setting.
 
 Voices, speech-to-text and selection reading run on your own computer. Only the summaries use the network: they go through your Claude Code login to Claude Haiku, the same service your agent already uses. Switch **Summaries** off to keep everything local.
@@ -81,7 +81,7 @@ The banner is a floating window: drag it anywhere and it stays there, also after
 | **Read all** | After a summary: reads the whole reply instead. |
 | The middle | Who is speaking and the sentence being read; while you talk, who you're talking to. |
 | One button per agent | Lit: that agent's replies are read aloud. Turning one off mid-reply pauses it; turning it on again continues. |
-| **Read selection** | While on, text you highlight or copy, in Herdr or any other app, is read aloud. Text that looks like a password is skipped (see [Privacy and security](#privacy-and-security)). |
+| **Read selection** | While on, text you highlight or copy in a terminal of the shown Herdr tab is read aloud. Other apps, and Herdr's side panels, are ignored. Text that looks like a password is skipped (see [Privacy and security](#privacy-and-security)). |
 | **Summaries / Full replies** | Summaries (the default): replies longer than about 400 characters are summarized first, which takes a few seconds ("Summarizing the reply…"). Full replies: everything is read as written. |
 | **Voices** | Pick a voice for everyone or per agent, set the speed, preview voices and download voice packs. |
 | **✕** | Closes the banner. Reopen it with `herdr-app do mod.open --name speech`. |
@@ -142,7 +142,7 @@ speech mod ──Talk──▶ listen.py (pw-record + faster-whisper) ──▶ 
 - `bin/summarize.py` runs `claude -p --model haiku` with hooks, tools and session saving off, so a summary is one small call and doesn't start another read-aloud. If it fails, the banner reads the first two sentences instead.
 - `bin/say.py` turns sentences into speech with Piper, preparing the next sentence while the current one plays, or with `spd-say`.
 - `bin/listen.py` records the microphone with `pw-record` (or `parecord`) and transcribes it with faster-whisper.
-- `bin/clipread.py` reads the highlighted text and the clipboard through GTK.
+- `bin/clipread.py` reads the highlighted text and the clipboard through GTK. The banner only reads it aloud when Herdr's window is active and `hc read` finds the text in a terminal of the shown tab.
 - `mods/speech-voices` is the Voices dialog. It stores choices in Herdr's shared state (`speech.voices`, `speech.speed`).
 
 ## Troubleshooting
@@ -164,7 +164,7 @@ Only Claude Code has a reply hook today. Talk and Read selection work with any a
   - **Summaries:** the text of long replies goes to Claude Haiku through your Claude Code login. Switch **Summaries** off to keep reply text local.
   - **One-time downloads:** voice packs (from the Piper catalog on Hugging Face, checked against the catalog's checksums) and the Whisper model.
 - **What's saved, and where:** replies waiting to be read, the current recording and the last 100 transcripts (`state/talk.log`). They're in `~/.local/share/herdr-speech`, readable by your user only.
-- **Read selection reads whatever you copy.** It skips text that looks like a password, token or key: one "word" mixing letter cases, digits or symbols, or common token prefixes. It can't recognize every secret, so switch it off while you use a password manager.
+- **Read selection only reads Herdr's terminals.** Herdr's window must be active, and the text must be on the screen, or in the last 300 lines, of a terminal in the shown tab. Selections and copies in other apps are never read. It also skips text that looks like a password, token or key: one "word" mixing letter cases, digits or symbols, or common token prefixes. It can't recognize every secret, so switch it off when you handle secrets in a terminal.
 - **Talk types into your agent and presses Enter.** If an agent may act without asking (an auto or bypass permission mode), a misheard prompt runs too. Check the banner's "You → …" line.
 - **What the installer changes:** it only writes to `~/.config/herdr-app/mods/{speech,speech-voices}` and `~/.local/share/herdr-speech`, plus `~/.claude/settings.json` with `--claude-hooks`, after a backup to `settings.json.bak-herdr-speech`. Python packages are pinned to tested versions.
 
