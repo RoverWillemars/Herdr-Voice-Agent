@@ -439,6 +439,7 @@ export default class VoiceAgent extends View {
     }
 
     const recording = this.mic === "recording";
+    const floating = Boolean(props()?.overlay); // else docked as a block in a layout (install.sh --dock)
     // Two rows: the controls, then what's being read (or heard) across the full width.
     const controls = h_flex().gap(8).items_center()
       .child(chip("mute", !muted, muted ? "speaker-off" : "speaker", muted ? "Muted" : "Speech",
@@ -463,14 +464,17 @@ export default class VoiceAgent extends View {
         (cx) => this.toggleMode(cx)))
       .child(chip("voices", false, "voice", "Voices", "Pick voices and speed, get voice packs",
         () => openOverlay({ mod: "voice-agent-voices", kind: "dialog", width: 620, height: 0.75 })))
-      .child(div().id("close").flex_shrink_0().px(4).text_color(t.dim).cursor_pointer().tooltip("Close (reopen: herdr-app do mod.open --name voice-agent)")
+      .when(floating, (el) => el.child(div().id("close").flex_shrink_0().px(4).text_color(t.dim).cursor_pointer()
+        .tooltip("Close (reopen: herdr-app do mod.open --name voice-agent)")
         .hover((s) => s.text_color(t.foreground))
         .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
         .on_click(() => closeOverlay(props().overlay))
-        .child("✕"));
+        .child("✕")));
 
+    // Floating, Herdr draws the window's frame; docked in a layout, a top border separates the strip.
     return v_flex().id("root").size_full().px(12).py(7).gap(6).justify_center().text_size(12)
       .bg(cur || recording ? t.selected : t.chrome)
+      .when(!floating, (el) => el.border_t(1).border_color(t.border))
       .child(controls)
       .child(h_flex().h(20).px(2).items_center().text_size(13).child(status));
   }

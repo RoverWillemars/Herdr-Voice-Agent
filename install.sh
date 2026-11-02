@@ -6,6 +6,8 @@
 #   ./install.sh --voice NAME        install this Piper voice pack instead of en_US-lessac-medium
 #   ./install.sh --no-voice          skip the voice pack (the robotic system voice is used)
 #   ./install.sh --no-mic            skip the speech-to-text model (the Talk button won't work)
+#   ./install.sh --dock              build the banner into the window: a copy of the main layout,
+#                                    named voice-agent, with a strip above the status bar
 #   ./install.sh --uninstall         remove the mods and helpers (voice packs and models too)
 set -euo pipefail
 
@@ -13,7 +15,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HERDR_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
 DATA="${HERDR_VOICE_HOME:-$HOME/.local/share/herdr-voice-agent}"
 VOICE="en_US-lessac-medium"
-HOOKS=0 MIC=1 UNINSTALL=0
+HOOKS=0 MIC=1 UNINSTALL=0 DOCK=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -22,7 +24,8 @@ while [ $# -gt 0 ]; do
     --no-voice) VOICE="" ;;
     --no-mic) MIC=0 ;;
     --uninstall) UNINSTALL=1 ;;
-    -h|--help) sed -n '2,10p' "$0"; exit 0 ;;
+    --dock) DOCK=1 ;;
+    -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
   shift
@@ -32,11 +35,14 @@ say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 
 if [ "$UNINSTALL" = 1 ]; then
-  command -v herdr-app >/dev/null && herdr-app do overlay.close --id voice-agent >/dev/null 2>&1 || true
+  if [ -f "$HERDR_HOME/layouts/voice-agent.json" ]; then
+    command -v herdr-app >/dev/null && herdr-app do layout.switch --name main >/dev/null 2>&1 || true
+    rm -f "$HERDR_HOME/layouts/voice-agent.json"
+  fi
   rm -rf "$HERDR_HOME/mods/voice-agent" "$HERDR_HOME/mods/voice-agent-voices"
   # Only delete a folder this installer made, whatever HERDR_VOICE_HOME says.
   if [ -f "$DATA/bin/say.py" ] && [ -d "$DATA/venv" ]; then rm -rf "$DATA"; else warn "$DATA doesn't look like a herdr-voice-agent folder; left it alone."; fi
-  say "Removed the mods and $DATA."
+  say "Removed the mods, the voice-agent layout and $DATA. Restart Herdr to clear a floating banner that was open."
   say "If you added the Claude Code hooks, remove the speak-reply.py entries with /hooks in Claude Code."
   exit 0
 fi
@@ -125,9 +131,18 @@ fi
 
 if command -v herdr-app >/dev/null && herdr-app status >/dev/null 2>&1; then
   for mod in voice-agent voice-agent-voices; do herdr-app check "$HERDR_HOME/mods/$mod" >/dev/null; done
-  herdr-app status | grep -q '"voice-agent"' || herdr-app do mod.open --name voice-agent >/dev/null
-  say "The Voice Agent banner is open in Herdr. Drag it where you like."
+  if [ "$DOCK" = 1 ]; then
+    # Herdr's own layouts are read-only, so the strip goes into a personal copy of "main".
+    [ -f "$HERDR_HOME/layouts/voice-agent.json" ] || herdr-app do layout.clone --name main --as voice-agent >/dev/null
+    python3 "$DATA/bin/dock-layout.py" "$HERDR_HOME/layouts/voice-agent.json"
+    herdr-app do layout.switch --name voice-agent >/dev/null
+    say "Herdr now shows the voice-agent layout: your main layout with the Voice Agent strip above the status bar."
+    say "Ctrl+Shift+L switches layouts; Herdr's main layout itself is unchanged."
+  else
+    herdr-app status | grep -q '"voice-agent"' || herdr-app do mod.open --name voice-agent >/dev/null
+    say "The Voice Agent banner is open in Herdr. Drag it where you like, or run again with --dock to build it into the window."
+  fi
 else
-  say "Start Herdr, then open the banner with: herdr-app do mod.open --name voice-agent"
+  say "Start Herdr, then run this again: it opens the banner (or, with --dock, builds it into the window)."
 fi
 [ "$HOOKS" = 1 ] || say "To have Claude Code replies read aloud, run again with --claude-hooks (see README)."

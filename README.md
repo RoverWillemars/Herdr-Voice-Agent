@@ -52,6 +52,7 @@ Installer options:
 | `--voice NAME` | Install another voice pack first, e.g. `en_GB-alba-medium`. |
 | `--no-voice` | Skip the voice pack; the robotic system voice is used. |
 | `--no-mic` | Skip speech-to-text; the Talk button won't work. |
+| `--dock` | Build the banner into the window instead of floating it (see [Floating or built in](#floating-or-built-in)). |
 | `--uninstall` | Remove the mods and `~/.local/share/herdr-voice-agent`. |
 
 Run `./install.sh` again to update after a `git pull`.
@@ -77,7 +78,16 @@ To use the hooks in one project instead of in every Claude Code session, skip `-
 
 ## Using it
 
-The banner is a floating window: drag it anywhere and it stays there. It opens again by itself, in the same spot, every time you start Herdr, with two exceptions:
+### Floating or built in
+
+The banner comes in two forms:
+
+- **Floating (the default):** a window over Herdr that you can drag anywhere.
+- **Built in (`./install.sh --dock`):** a fixed strip above the status bar that takes its own space, so it never covers your terminals. Herdr's own layouts are read-only, so `--dock` makes a copy of the main layout named **voice-agent**, adds the strip, and switches to it. Ctrl+Shift+L switches back to Herdr's main layout, which stays as it was.
+
+  The copy doesn't receive Herdr's updates to the main layout. To get them, delete `~/.config/herdr-app/layouts/voice-agent.json` and run `./install.sh --dock` again. `--uninstall` removes the copy too.
+
+The floating banner stays where you drag it. It opens again by itself, in the same spot, every time you start Herdr, with two exceptions:
 
 - **You closed it with ✕:** it then stays closed, also after a restart.
 - **You switched to another layout** (Ctrl+Shift+L): the banner belongs to the layout it was opened in, so it hides in the others and comes back when you switch back.

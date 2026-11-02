@@ -61,7 +61,8 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
 ## Built from
 
 - **`mods/voice-agent` (the banner):**
-  - Opened with `mod.open`; its `mod.json` `overlay` is `{kind: "window", key: "voice-agent", keep: true, width: 0.8, height: 72}`.
+  - Floating: opened with `mod.open`; its `mod.json` `overlay` is `{kind: "window", key: "voice-agent", keep: true, width: 0.8, height: 72}`.
+  - Built in (`install.sh --dock`): `layout.clone {name: "main", as: "voice-agent"}`, then `bin/dock-layout.py` inserts `{id: "voice-agent", type: "block", content: {mod: "voice-agent"}, size: {px: 72}}` in the `work` column before `status`, then `layout.switch`. The mod tells the two apart by `props().overlay`: docked, it draws a top border and no ✕.
   - Uses `agents`, `focused`, `exec`, `hc`, `readTextFile`, `watchFolder` (on `spool/` and `state/`), `shared`/`setShared`, `nextCommand`, `openOverlay` and `closeOverlay`.
   - `fs.readdir` lists the voice packs.
   - Every pill stops `left` mouse-down propagation, so pressing a button doesn't drag the window.
@@ -79,7 +80,7 @@ A floating banner that reads agents' replies aloud, sentence by sentence (long o
 
 ## Watch out
 
-- Shipped layouts are read-only, so the banner is a kept overlay window rather than a layout block. `place: "bottom"` doesn't dock into `main`.
+- Shipped layouts are read-only, so a layout block needs a personal clone of `main` (`--dock`); the default is a kept overlay window. `place: "bottom"` doesn't dock into `main`.
 - Mods can write only under `~/.config/herdr-app`, and writing files under `mods/` reloads the mod. So all runtime data lives in `~/.local/share/herdr-voice-agent`, and the mod changes it only through `exec` (`touch`, `mkdir`, `rm`).
 - On GNOME the default "source" can be the speaker monitor, so the recorder has to pick an `alsa_input` source itself.
 - For GTK clipboard reads, require Gdk 3.0 *and* Gtk 3.0 before importing, or Gdk 4 loads first. They need `GDK_BACKEND=x11` to work without a window. wl-paste flashes a window on GNOME, and xclip is often not installed.
