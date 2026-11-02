@@ -1,0 +1,1 @@
+{ "place": "none", "title": "Voice Agent", "overlay": { "kind": "window", "key": "voice-agent", "keep": true, "width": 0.8, "height": 72 } }

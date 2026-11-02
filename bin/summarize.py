@@ -4,7 +4,7 @@
   summarize.py REPLY     prints the summary; exits 1 when it can't make one
 
 Runs `claude -p` with hooks, tools and session saving off, so the summary costs one small Haiku
-call and doesn't start another read-aloud. Env: HERDR_SPEECH_SUMMARY_MODEL (default "haiku"),
+call and doesn't start another read-aloud. Env: HERDR_VOICE_SUMMARY_MODEL (default "haiku"),
 CLAUDE_BIN (default: claude on PATH, else ~/.local/bin/claude).
 """
 import os
@@ -20,7 +20,7 @@ PROMPT = (
     "Keep the agent's first-person voice and don't change who does what. "
     "Use the language the reply is written in. Output only the summary."
 )
-DATA = os.environ.get("HERDR_SPEECH_HOME", os.path.expanduser("~/.local/share/herdr-speech"))
+DATA = os.environ.get("HERDR_VOICE_HOME", os.path.expanduser("~/.local/share/herdr-voice-agent"))
 
 
 def main():
@@ -28,10 +28,10 @@ def main():
         print(__doc__, file=sys.stderr)
         sys.exit(2)
     claude = os.environ.get("CLAUDE_BIN") or shutil.which("claude") or os.path.expanduser("~/.local/bin/claude")
-    cmd = [claude, "-p", "--model", os.environ.get("HERDR_SPEECH_SUMMARY_MODEL", "haiku"),
+    cmd = [claude, "-p", "--model", os.environ.get("HERDR_VOICE_SUMMARY_MODEL", "haiku"),
            "--no-session-persistence", "--settings", '{"disableAllHooks": true}', "--tools", "",
            "--system-prompt", PROMPT]
-    env = dict(os.environ, HERDR_SPEECH_SUMMARIZING="1")  # speak-reply.py ignores this session
+    env = dict(os.environ, HERDR_VOICE_SUMMARIZING="1")  # speak-reply.py ignores this session
     os.makedirs(DATA, exist_ok=True)
     try:
         # Run outside any project so no CLAUDE.md is loaded; stay under the banner's 30 s limit.

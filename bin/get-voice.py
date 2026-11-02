@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Downloads Piper voice packs into the speech mod's voices folder.
+"""Downloads Piper voice packs into the voice-agent mod's voices folder.
 
   get-voice.py NAME [NAME...]   e.g. en_US-lessac-medium, en_GB-alba-medium, nl_NL-ronnie-medium
   get-voice.py --list [FILTER]  every voice in the Piper catalog (https://rhasspy.github.io/piper-samples/)
@@ -13,7 +13,7 @@ import os
 import sys
 import urllib.request
 
-DATA = os.environ.get("HERDR_SPEECH_HOME", os.path.expanduser("~/.local/share/herdr-speech"))
+DATA = os.environ.get("HERDR_VOICE_HOME", os.path.expanduser("~/.local/share/herdr-voice-agent"))
 VOICES = os.path.join(DATA, "voices")
 BASE = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/"
 

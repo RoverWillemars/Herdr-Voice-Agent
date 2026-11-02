@@ -10,7 +10,7 @@ venv/
 models/
 *.part
 
-# Runtime data and personal recordings (normally in ~/.local/share/herdr-speech)
+# Runtime data and personal recordings (normally in ~/.local/share/herdr-voice-agent)
 spool/
 state/
 *.wav
@@ -24,7 +24,7 @@ mods/*/jsconfig.json
 # Secrets and local config
 .env
 .env.*
-*.bak-herdr-speech
+*.bak-herdr-voice-agent
 
 # Editors and OS
 .idea/

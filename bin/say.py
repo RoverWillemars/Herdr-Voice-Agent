@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reads sentences aloud for the Herdr speech mod, one job at a time.
+"""Reads sentences aloud for the Herdr voice-agent mod, one job at a time.
 
   say.py --job JSON      speak a job: {"job", "terminal", "sentences": [...], "voice", "speed"}
   say.py --stop [JOB]    stop that job (default: the one being spoken)
@@ -19,7 +19,7 @@ import tempfile
 import threading
 import wave
 
-DATA = os.environ.get("HERDR_SPEECH_HOME", os.path.expanduser("~/.local/share/herdr-speech"))
+DATA = os.environ.get("HERDR_VOICE_HOME", os.path.expanduser("~/.local/share/herdr-voice-agent"))
 STATE = os.path.join(DATA, "state")
 VOICES = os.path.join(DATA, "voices")
 NOW = os.path.join(STATE, "now.json")
@@ -76,7 +76,7 @@ def speak_piper(job, report):
 
     voice = PiperVoice.load(piper_model(job["voice"].split(":", 1)[1]))
     config = SynthesisConfig(length_scale=1.0 / max(0.5, min(2.0, job.get("speed", 1.0))))
-    tmp = tempfile.mkdtemp(prefix="herdr-speech-")
+    tmp = tempfile.mkdtemp(prefix="herdr-voice-agent-")
     ready = queue.Queue()
 
     # Synthesize ahead while the previous sentence plays, so there are no gaps.

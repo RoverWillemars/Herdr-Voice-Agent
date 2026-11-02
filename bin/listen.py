@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""Microphone input for the Herdr speech mod.
+"""Microphone input for the Herdr voice-agent mod.
 
   listen.py start     start recording (prints {"mic": <source>})
   listen.py stop      stop recording and transcribe (prints {"text": ...})
   listen.py cancel    stop recording and throw it away
   listen.py warmup    download the speech-to-text model ahead of time
 
-Env: HERDR_SPEECH_MIC (a PipeWire/Pulse source name; default: the first one that isn't a
-speaker monitor), HERDR_SPEECH_STT_MODEL (faster-whisper model, default "base"),
-HERDR_SPEECH_LANGUAGE (e.g. "en", "nl"; default: detected).
+Env: HERDR_VOICE_MIC (a PipeWire/Pulse source name; default: the first one that isn't a
+speaker monitor), HERDR_VOICE_STT_MODEL (faster-whisper model, default "base"),
+HERDR_VOICE_LANGUAGE (e.g. "en", "nl"; default: detected).
 """
 import json
 import os
@@ -17,12 +17,12 @@ import subprocess
 import sys
 import time
 
-DATA = os.environ.get("HERDR_SPEECH_HOME", os.path.expanduser("~/.local/share/herdr-speech"))
+DATA = os.environ.get("HERDR_VOICE_HOME", os.path.expanduser("~/.local/share/herdr-voice-agent"))
 STATE = os.path.join(DATA, "state")
 MODELS = os.path.join(DATA, "models")
 WAV = os.path.join(STATE, "recording.wav")
 PID = os.path.join(STATE, "recording.pid")
-MODEL = os.environ.get("HERDR_SPEECH_STT_MODEL", "base")
+MODEL = os.environ.get("HERDR_VOICE_STT_MODEL", "base")
 
 
 class NoMicrophone(Exception):
@@ -32,8 +32,8 @@ class NoMicrophone(Exception):
 def microphone():
     """The source to record from. The default source is sometimes the speakers' monitor, which
     records what's playing, and a sound card's mic jack is listed even with nothing plugged in."""
-    if os.environ.get("HERDR_SPEECH_MIC"):
-        return os.environ["HERDR_SPEECH_MIC"]
+    if os.environ.get("HERDR_VOICE_MIC"):
+        return os.environ["HERDR_VOICE_MIC"]
     try:
         out = subprocess.run(["pactl", "-f", "json", "list", "sources"], capture_output=True, text=True).stdout
         sources = json.loads(out)
@@ -102,7 +102,7 @@ def stop():
     if not end_recording(signal.SIGINT) or not os.path.exists(WAV):
         print(json.dumps({"text": "", "error": "not recording"}))
         return
-    segments, _info = model().transcribe(WAV, language=os.environ.get("HERDR_SPEECH_LANGUAGE") or None, vad_filter=True)
+    segments, _info = model().transcribe(WAV, language=os.environ.get("HERDR_VOICE_LANGUAGE") or None, vad_filter=True)
     text = " ".join(s.text.strip() for s in segments).strip()
     os.unlink(WAV)
     print(json.dumps({"text": text}))

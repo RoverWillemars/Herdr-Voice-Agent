@@ -3,12 +3,12 @@ import { h_flex, v_flex } from "gpui-base";
 import * as fs from "fs/promises";
 import { agents, theme, exec, home, watchFolder, shared, setShared, props, closeOverlay } from "herdr";
 
-// Opened from the speech banner's Voices button. Writes the choices to shared state, which the
-// banner reads: speech.voices { default?, <terminal>? } and speech.speed.
-const DATA = `${home()}/.local/share/herdr-speech`;
+// Opened from the Voice Agent banner's Voices button. Writes the choices to shared state, which the
+// banner reads: voice-agent.voices { default?, <terminal>? } and voice-agent.speed.
+const DATA = `${home()}/.local/share/herdr-voice-agent`;
 const PY = `${DATA}/venv/bin/python`;
 const BIN = `${DATA}/bin`;
-const ICON = (name) => `mods/speech/${name}.svg`;
+const ICON = (name) => `mods/voice-agent/${name}.svg`;
 const SYSTEM = ["male1", "female1", "male2", "female2"];
 const SPEEDS = [0.8, 0.9, 1, 1.15, 1.3];
 
@@ -33,7 +33,7 @@ const nice = (id) => {
   return `${(speaker ?? name).replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())} · ${lang}${quality ? ` · ${quality}` : ""}`;
 };
 
-export default class SpeechVoices extends View {
+export default class VoiceAgentVoices extends View {
   init(_props, cx) {
     this.target = "default";
     this.packs = [];
@@ -56,17 +56,17 @@ export default class SpeechVoices extends View {
   }
 
   choose(id) {
-    const voices = { ...(shared("speech.voices") ?? {}) };
+    const voices = { ...(shared("voice-agent.voices") ?? {}) };
     if (id) voices[this.target] = id;
     else delete voices[this.target];
-    setShared("speech.voices", voices);
+    setShared("voice-agent.voices", voices);
   }
 
   preview(id, cx) {
     this.playing = id;
     cx.notify();
     cx.spawn(async (cx) => {
-      await exec("env", [`SPEED=${shared("speech.speed") ?? 1}`, PY, `${BIN}/say.py`, "--preview", id]).catch(() => {});
+      await exec("env", [`SPEED=${shared("voice-agent.speed") ?? 1}`, PY, `${BIN}/say.py`, "--preview", id]).catch(() => {});
       if (this.playing === id) this.playing = null;
       cx.notify();
     });
@@ -81,12 +81,12 @@ export default class SpeechVoices extends View {
   render() {
     const t = theme();
     const list = agents();
-    const voices = shared("speech.voices") ?? {};
-    // Without a choice the banner uses the first voice pack (see voiceFor in mods/speech).
+    const voices = shared("voice-agent.voices") ?? {};
+    // Without a choice the banner uses the first voice pack (see voiceFor in mods/voice-agent).
     const fallback = voices.default ?? (this.packs.length ? `piper:${this.packs[0]}` : null);
     const current = voices[this.target] ?? fallback;
     const own = this.target !== "default" && Boolean(voices[this.target]);
-    const speed = Number(shared("speech.speed") ?? 1);
+    const speed = Number(shared("voice-agent.speed") ?? 1);
 
     const button = (id, label, icon, onClick, primary) => h_flex().id(id).flex_shrink_0().gap(6).items_center().px(10).h(26).rounded(6)
       .cursor_pointer().border(1).border_color(primary ? t.solid : t.border)
@@ -137,14 +137,14 @@ export default class SpeechVoices extends View {
           .child(own ? "This agent has its own voice." : "Uses the same voice as everyone.")
           .when(own, (el) => el.child(pill("same", false, "Use everyone's voice", () => this.choose(null))))))
         .child(heading("Speed"))
-        .child(h_flex().gap(6).children(SPEEDS.map((s) => pill(`speed-${s}`, Math.abs(speed - s) < 0.01, `${s}×`, () => setShared("speech.speed", s)))))
+        .child(h_flex().gap(6).children(SPEEDS.map((s) => pill(`speed-${s}`, Math.abs(speed - s) < 0.01, `${s}×`, () => setShared("voice-agent.speed", s)))))
         .child(heading("Installed"))
         .children(installed.map(voiceRow))
         .child(heading("Get voice packs"))
         .children(SUGGESTED.filter((v) => !this.packs.includes(v.name)).map(getRow))
         .child(div().pt(6).text_size(12).text_color(t.muted).child(
           "Any Piper voice works (samples: rhasspy.github.io/piper-samples). Run "
-          + "~/.local/share/herdr-speech/bin/get-voice.py <name>, or put NAME.onnx and NAME.onnx.json in "
-          + "~/.local/share/herdr-speech/voices.")));
+          + "~/.local/share/herdr-voice-agent/bin/get-voice.py <name>, or put NAME.onnx and NAME.onnx.json in "
+          + "~/.local/share/herdr-voice-agent/voices.")));
   }
 }

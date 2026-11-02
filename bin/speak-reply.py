@@ -4,8 +4,8 @@
 Stop hook:              speak-reply.py
 UserPromptSubmit hook:  speak-reply.py --stop
 
-When the Herdr "speech" mod is running (its heartbeat is fresh), the reply is
-handed to it through ~/.local/share/herdr-speech/spool/<terminal>.json and the mod
+When the Herdr "voice-agent" mod is running (its heartbeat is fresh), the reply is
+handed to it through ~/.local/share/herdr-voice-agent/spool/<terminal>.json and the mod
 does the speaking (voices, banner, mute, per-agent on/off). Otherwise spd-say is used
 directly.
 
@@ -21,7 +21,7 @@ import subprocess
 import sys
 import time
 
-DATA = os.environ.get("HERDR_SPEECH_HOME", os.path.expanduser("~/.local/share/herdr-speech"))
+DATA = os.environ.get("HERDR_VOICE_HOME", os.path.expanduser("~/.local/share/herdr-voice-agent"))
 SPOOL = os.path.join(DATA, "spool")
 HEARTBEAT = os.path.join(SPOOL, ".heartbeat")
 
@@ -89,7 +89,7 @@ def hand_to_mod(event):
 
 
 def main():
-    if os.environ.get("HERDR_SPEECH_SUMMARIZING"):
+    if os.environ.get("HERDR_VOICE_SUMMARIZING"):
         return  # the summarizer's own claude -p session
     if "--stop" in sys.argv:
         if not hand_to_mod({"kind": "stop"}):

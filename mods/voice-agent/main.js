@@ -3,16 +3,16 @@ import { h_flex, v_flex } from "gpui-base";
 import * as fs from "fs/promises";
 import { agents, focused, panes, window, theme, exec, hc, home, readTextFile, watchFolder, shared, setShared, nextCommand, props, closeOverlay, openOverlay } from "herdr";
 
-// The scripts and data live in ~/.local/share/herdr-speech (see install.sh):
+// The scripts and data live in ~/.local/share/herdr-voice-agent (see install.sh):
 //   spool/<terminal>.json  replies from the Claude Code hook ({kind: "say" | "stop", id, text})
 //   spool/.heartbeat       touched while this mod runs, so the hook hands replies to it
 //   state/now.json         what say.py is reading ({job, index, done})
 //   voices/*.onnx          Piper voice packs
-const DATA = `${home()}/.local/share/herdr-speech`;
+const DATA = `${home()}/.local/share/herdr-voice-agent`;
 const PY = `${DATA}/venv/bin/python`;
 const BIN = `${DATA}/bin`;
 const SYSTEM_VOICES = ["male1", "female1", "male2", "female2", "male3", "female3"];
-const ICON = (name) => `mods/speech/${name}.svg`;
+const ICON = (name) => `mods/voice-agent/${name}.svg`;
 const MAX_CHARS = 6000;
 const SHORT = 400; // characters; shorter replies are read as they are
 
@@ -40,7 +40,7 @@ function looksSecret(text) {
 // Starts a program that outlives exec's 30 s limit.
 const detach = (cmd, args) => exec("sh", ["-c", 'setsid "$@" </dev/null >/dev/null 2>&1 &', "sh", cmd, ...args]);
 
-export default class Speech extends View {
+export default class VoiceAgent extends View {
   init(_props, cx) {
     this.jobs = [];       // { terminal, sentences } waiting
     this.current = null;  // { id, terminal, sentences, index } being read
@@ -77,7 +77,7 @@ export default class Speech extends View {
     });
     cx.timer.every(20000, () => { this.beat(); });
     cx.timer.every(1000, (cx) => {
-      if (shared("speech.select") && !this.polling) cx.spawn(async (cx) => this.pollSelection(cx));
+      if (shared("voice-agent.select") && !this.polling) cx.spawn(async (cx) => this.pollSelection(cx));
     });
     cx.spawn(async (cx) => {
       for (;;) {
@@ -124,11 +124,11 @@ export default class Speech extends View {
     }
   }
 
-  // Long replies are read as a Haiku summary (speech.mode "summary", the default); Read all reads
+  // Long replies are read as a Haiku summary (voice-agent.mode "summary", the default); Read all reads
   // the whole reply. If the summary fails, the first two sentences stand in for it.
   reply(ev, cx) {
     const { terminal, text, raw } = ev;
-    const summarize = (shared("speech.mode") ?? "summary") === "summary" && Boolean(raw) && text.length > SHORT;
+    const summarize = (shared("voice-agent.mode") ?? "summary") === "summary" && Boolean(raw) && text.length > SHORT;
     this.lastReply = { terminal, text, summarized: summarize };
     if (!summarize) return this.say(terminal, text, cx);
     this.pending[terminal] = ev.id;
@@ -151,7 +151,7 @@ export default class Speech extends View {
   }
 
   toggleMode(cx) {
-    setShared("speech.mode", (shared("speech.mode") ?? "summary") === "summary" ? "full" : "summary");
+    setShared("voice-agent.mode", (shared("voice-agent.mode") ?? "summary") === "summary" ? "full" : "summary");
     cx.notify();
   }
 
@@ -181,7 +181,7 @@ export default class Speech extends View {
       await this.loadPacks();
       if (this.current?.id !== id) return; // stopped while looking for voice packs
       const spec = { job: id, terminal: job.terminal, sentences: job.sentences,
-        voice: this.voiceFor(job.terminal), speed: Number(shared("speech.speed") ?? 1) };
+        voice: this.voiceFor(job.terminal), speed: Number(shared("voice-agent.speed") ?? 1) };
       await detach(PY, [`${BIN}/say.py`, "--job", JSON.stringify(spec)]).catch(() => {});
     });
   }
@@ -236,13 +236,13 @@ export default class Speech extends View {
   }
 
   silenced(terminal) {
-    return Boolean(shared("speech.muted")) || this.isOff(terminal);
+    return Boolean(shared("voice-agent.muted")) || this.isOff(terminal);
   }
 
-  // speech.voices: { default?, <terminal>? } of "piper:<pack>" | "system:<type>". Without a choice,
+  // voice-agent.voices: { default?, <terminal>? } of "piper:<pack>" | "system:<type>". Without a choice,
   // agents share the first voice pack, or get a system voice each.
   voiceFor(terminal) {
-    const chosen = shared("speech.voices") ?? {};
+    const chosen = shared("voice-agent.voices") ?? {};
     const pick = chosen[terminal] ?? chosen.default;
     if (pick && (!pick.startsWith("piper:") || this.packs.includes(pick.slice(6)))) return pick;
     if (this.packs.length) return `piper:${this.packs[0]}`;
@@ -251,20 +251,20 @@ export default class Speech extends View {
   }
 
   isOff(terminal) {
-    return Boolean((shared("speech.off") ?? {})[terminal]);
+    return Boolean((shared("voice-agent.off") ?? {})[terminal]);
   }
 
   toggleAgent(terminal, cx) {
-    const off = { ...(shared("speech.off") ?? {}) };
+    const off = { ...(shared("voice-agent.off") ?? {}) };
     off[terminal] = !off[terminal];
-    setShared("speech.off", off);
+    setShared("voice-agent.off", off);
     if (off[terminal]) this.hold(cx, terminal);
     else this.resume(cx, terminal);
   }
 
   toggleMute(cx) {
-    const muted = !shared("speech.muted");
-    setShared("speech.muted", muted);
+    const muted = !shared("voice-agent.muted");
+    setShared("voice-agent.muted", muted);
     if (muted) this.hold(cx);
     else this.resume(cx);
   }
@@ -344,8 +344,8 @@ export default class Speech extends View {
   // ---- reading highlighted or copied text ----
 
   toggleSelect(cx) {
-    const on = !shared("speech.select");
-    setShared("speech.select", on);
+    const on = !shared("voice-agent.select");
+    setShared("voice-agent.select", on);
     this.clipLast = {};
     this.clipOk = true;
     if (!on) this.stop(cx, "selection");
@@ -371,7 +371,7 @@ export default class Speech extends View {
         const first = !(which in this.clipLast);
         const changed = text !== this.clipLast[which];
         this.clipLast[which] = text;
-        if (first || !changed || !text || !ours || text === this.lastSpoken || shared("speech.muted") || looksSecret(text)) continue;
+        if (first || !changed || !text || !ours || text === this.lastSpoken || shared("voice-agent.muted") || looksSecret(text)) continue;
         if (!(await this.inTerminal(text))) continue;
         this.lastSpoken = text;
         this.stop(cx, "selection");
@@ -397,8 +397,8 @@ export default class Speech extends View {
 
   render() {
     const t = theme();
-    const muted = Boolean(shared("speech.muted"));
-    const select = Boolean(shared("speech.select"));
+    const muted = Boolean(shared("voice-agent.muted"));
+    const select = Boolean(shared("voice-agent.select"));
     const list = agents();
     const who = (terminal) => terminal === "selection" ? "Selection" : (list.find((a) => a.address === terminal)?.space_name ?? terminal);
     const waiting = Object.keys(this.held).filter((k) => this.held[k].length);
@@ -423,9 +423,9 @@ export default class Speech extends View {
 
     const cur = this.current;
     const pendingFor = Object.keys(this.pending)[0];
-    const summaries = (shared("speech.mode") ?? "summary") === "summary";
+    const summaries = (shared("voice-agent.mode") ?? "summary") === "summary";
     let status;
-    if (!this.ready) status = line(null, null, "Run install.sh from the herdr-speech repo to set up voices and the microphone");
+    if (!this.ready) status = line(null, null, "Run install.sh from the herdr-voice-agent repo to set up voices and the microphone");
     else if (this.mic === "recording") status = line(dot, `To ${who(this.micTarget)}`, "Listening… click Send when you're done");
     else if (this.mic === "transcribing") status = line(div().flex_shrink_0().text_color(t.accent).frames(["◐", "◓", "◑", "◒"], 120), null, "Turning your words into text…");
     else if (cur) status = line(bars, `${who(cur.terminal)}${cur.summary ? " · summary" : ""}`, cur.sentences[Math.max(0, cur.index)] ?? "");
@@ -462,8 +462,8 @@ export default class Speech extends View {
         summaries ? "Long replies are summarized before reading. Click to read them in full" : "Replies are read in full. Click to summarize long ones",
         (cx) => this.toggleMode(cx)))
       .child(chip("voices", false, "voice", "Voices", "Pick voices and speed, get voice packs",
-        () => openOverlay({ mod: "speech-voices", kind: "dialog", width: 620, height: 0.75 })))
-      .child(div().id("close").flex_shrink_0().px(4).text_color(t.dim).cursor_pointer().tooltip("Close (reopen: herdr-app do mod.open --name speech)")
+        () => openOverlay({ mod: "voice-agent-voices", kind: "dialog", width: 620, height: 0.75 })))
+      .child(div().id("close").flex_shrink_0().px(4).text_color(t.dim).cursor_pointer().tooltip("Close (reopen: herdr-app do mod.open --name voice-agent)")
         .hover((s) => s.text_color(t.foreground))
         .on_mouse_down("left", (_e, cx) => cx.stop_propagation())
         .on_click(() => closeOverlay(props().overlay))

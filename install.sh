@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the herdr-speech mods into Herdr and its helpers into ~/.local/share/herdr-speech.
+# Installs the herdr-voice-agent mods into Herdr and its helpers into ~/.local/share/herdr-voice-agent.
 #
 #   ./install.sh                     mods, helpers, Python env, one voice pack, speech-to-text model
 #   ./install.sh --claude-hooks      also add the read-aloud hooks to ~/.claude/settings.json
@@ -11,7 +11,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HERDR_HOME="${HERDR_APP_HOME:-$HOME/.config/herdr-app}"
-DATA="${HERDR_SPEECH_HOME:-$HOME/.local/share/herdr-speech}"
+DATA="${HERDR_VOICE_HOME:-$HOME/.local/share/herdr-voice-agent}"
 VOICE="en_US-lessac-medium"
 HOOKS=0 MIC=1 UNINSTALL=0
 
@@ -32,10 +32,10 @@ say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[33mwarning:\033[0m %s\n' "$*" >&2; }
 
 if [ "$UNINSTALL" = 1 ]; then
-  command -v herdr-app >/dev/null && herdr-app do overlay.close --id speech >/dev/null 2>&1 || true
-  rm -rf "$HERDR_HOME/mods/speech" "$HERDR_HOME/mods/speech-voices"
-  # Only delete a folder this installer made, whatever HERDR_SPEECH_HOME says.
-  if [ -f "$DATA/bin/say.py" ] && [ -d "$DATA/venv" ]; then rm -rf "$DATA"; else warn "$DATA doesn't look like a herdr-speech folder; left it alone."; fi
+  command -v herdr-app >/dev/null && herdr-app do overlay.close --id voice-agent >/dev/null 2>&1 || true
+  rm -rf "$HERDR_HOME/mods/voice-agent" "$HERDR_HOME/mods/voice-agent-voices"
+  # Only delete a folder this installer made, whatever HERDR_VOICE_HOME says.
+  if [ -f "$DATA/bin/say.py" ] && [ -d "$DATA/venv" ]; then rm -rf "$DATA"; else warn "$DATA doesn't look like a herdr-voice-agent folder; left it alone."; fi
   say "Removed the mods and $DATA."
   say "If you added the Claude Code hooks, remove the speak-reply.py entries with /hooks in Claude Code."
   exit 0
@@ -49,8 +49,8 @@ python3 -c 'import gi; gi.require_version("Gtk", "3.0")' 2>/dev/null \
   || warn "Python GTK bindings (python3-gi, gir1.2-gtk-3.0) are needed for Read selection."
 
 # Never replace someone else's mod that happens to share a name.
-for mod in speech speech-voices; do
-  if [ -f "$HERDR_HOME/mods/$mod/main.js" ] && ! grep -q 'herdr-speech' "$HERDR_HOME/mods/$mod/main.js"; then
+for mod in voice-agent voice-agent-voices; do
+  if [ -f "$HERDR_HOME/mods/$mod/main.js" ] && ! grep -q 'herdr-voice-agent' "$HERDR_HOME/mods/$mod/main.js"; then
     echo "$HERDR_HOME/mods/$mod belongs to another mod; move it aside and run this again." >&2
     exit 1
   fi
@@ -86,7 +86,7 @@ if [ "$MIC" = 1 ]; then
 fi
 
 say "Installing the mods into $HERDR_HOME/mods"
-for mod in speech speech-voices; do
+for mod in voice-agent voice-agent-voices; do
   rm -rf "$HERDR_HOME/mods/$mod"
   cp -r "$REPO/mods/$mod" "$HERDR_HOME/mods/$mod"
 done
@@ -101,7 +101,7 @@ settings = {}
 if os.path.exists(path):
     with open(path) as f:
         settings = json.load(f)
-    shutil.copy2(path, path + ".bak-herdr-speech")
+    shutil.copy2(path, path + ".bak-herdr-voice-agent")
 hooks = settings.setdefault("hooks", {})
 wanted = {
     "Stop": {"type": "command", "command": f"{script} 2>/dev/null || true", "async": True},
@@ -118,14 +118,14 @@ with open(path + ".tmp", "w") as f:
     f.write("\n")
 os.replace(path + ".tmp", path)
 EOF
-  say "Hooks added (backup: ~/.claude/settings.json.bak-herdr-speech). In running Claude Code sessions, open /hooks once (or restart) to load them."
+  say "Hooks added (backup: ~/.claude/settings.json.bak-herdr-voice-agent). In running Claude Code sessions, open /hooks once (or restart) to load them."
 fi
 
 if command -v herdr-app >/dev/null && herdr-app status >/dev/null 2>&1; then
-  for mod in speech speech-voices; do herdr-app check "$HERDR_HOME/mods/$mod" >/dev/null; done
-  herdr-app status | grep -q '"speech"' || herdr-app do mod.open --name speech >/dev/null
-  say "The speech banner is open in Herdr. Drag it where you like."
+  for mod in voice-agent voice-agent-voices; do herdr-app check "$HERDR_HOME/mods/$mod" >/dev/null; done
+  herdr-app status | grep -q '"voice-agent"' || herdr-app do mod.open --name voice-agent >/dev/null
+  say "The Voice Agent banner is open in Herdr. Drag it where you like."
 else
-  say "Start Herdr, then open the banner with: herdr-app do mod.open --name speech"
+  say "Start Herdr, then open the banner with: herdr-app do mod.open --name voice-agent"
 fi
 [ "$HOOKS" = 1 ] || say "To have Claude Code replies read aloud, run again with --claude-hooks (see README)."
