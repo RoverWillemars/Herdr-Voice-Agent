@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Downloaded at install time, never committed: voice packs, speech-to-text models
+*.onnx
+*.onnx.json
+models/
+*.part
+
+# Runtime data and personal recordings (normally in ~/.local/share/herdr-speech)
+spool/
+state/
+*.wav
+*.log
+*.pid
+
+# Written into mod folders by `herdr-app check`
+mods/*/gpui-kit.d.ts
+mods/*/jsconfig.json
+
+# Secrets and local config
+.env
+.env.*
+*.bak-herdr-speech
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
