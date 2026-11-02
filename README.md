@@ -77,7 +77,18 @@ To use the hooks in one project instead of in every Claude Code session, skip `-
 
 ## Using it
 
-The banner is a floating window: drag it anywhere and it stays there, also after a restart. From left to right:
+The banner is a floating window: drag it anywhere and it stays there. It opens again by itself, in the same spot, every time you start Herdr, with two exceptions:
+
+- **You closed it with ✕:** it then stays closed, also after a restart.
+- **You switched to another layout** (Ctrl+Shift+L): the banner belongs to the layout it was opened in, so it hides in the others and comes back when you switch back.
+
+To open it again, run:
+
+```sh
+herdr-app do mod.open --name voice-agent
+```
+
+From left to right:
 
 | Control | What it does |
 |---|---|
